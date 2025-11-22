@@ -227,6 +227,17 @@
                 </div>
             </div>
             
+            <!-- 专辑ID显示区域 -->
+            <div class="album-ids-container">
+                <div class="album-ids-label">专辑ID列表：</div>
+                <div class="album-ids-content">
+                    <div class="album-ids-text">{{ albums.map(album => album.album_id).join(',') }}</div>
+                    <button class="copy-ids-btn" @click="copyAlbumIds" :disabled="albums.length === 0">
+                        <i class="fas fa-copy"></i> 复制ID
+                    </button>
+                </div>
+            </div>
+            
             <!-- 专辑分页 - 已隐藏，显示全部专辑 -->
         </div>
 
@@ -578,6 +589,96 @@
   }
 }
 
+/* 专辑ID显示区域样式 */
+.album-ids-container {
+    margin-top: 30px;
+    padding: 20px;
+    background: #ffffff;
+    border-radius: 8px;
+    border: 1px solid #e0e0e0;
+}
+
+.album-ids-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #333333;
+    margin-bottom: 10px;
+}
+
+.album-ids-content {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+
+.album-ids-text {
+    flex: 1;
+    min-width: 0;
+    background: #ffffff;
+    padding: 12px 16px;
+    border-radius: 6px;
+    font-family: 'Monaco', 'Consolas', monospace;
+    font-size: 13px;
+    color: #666666;
+    word-break: break-all;
+    line-height: 1.5;
+    border: 1px solid #e0e0e0;
+}
+
+.copy-ids-btn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 10px 16px;
+    background: linear-gradient(135deg, #1db954, #1ed760);
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    white-space: nowrap;
+}
+
+.copy-ids-btn:hover:not(:disabled) {
+    background: linear-gradient(135deg, #1a9e47, #1aa356);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(29, 185, 84, 0.3);
+}
+
+.copy-ids-btn:active:not(:disabled) {
+    transform: translateY(0);
+}
+
+.copy-ids-btn:disabled {
+    background: #444;
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+/* 复制成功通知样式 */
+.copy-notification {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(0.8);
+    background: rgba(0, 0, 0, 0.8);
+    color: white;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 14px;
+    opacity: 0;
+    pointer-events: none;
+    transition: all 0.3s ease;
+    z-index: 9999;
+}
+
+.copy-notification.show {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
 </style>
 
 <script setup>
@@ -781,6 +882,45 @@ const fetchAlbumSongsCount = async (albumId) => {
         console.error(`获取专辑${albumId}歌曲数量失败:`, error);
         return 0;
     }
+};
+
+// 复制专辑ID
+const copyAlbumIds = () => {
+    if (albums.value.length === 0) return;
+    
+    const albumIds = albums.value.map(album => album.album_id).join(',');
+    navigator.clipboard.writeText(albumIds).then(() => {
+        // 显示复制成功提示
+        const notification = document.createElement('div');
+        notification.className = 'copy-notification';
+        notification.textContent = '专辑ID已复制到剪贴板';
+        document.body.appendChild(notification);
+        
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 10);
+        
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 2000);
+    }).catch(err => {
+        console.error('复制失败:', err);
+        // 降级方案：使用传统方式复制
+        const textarea = document.createElement('textarea');
+        textarea.value = albumIds;
+        document.body.appendChild(textarea);
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            alert('专辑ID已复制到剪贴板');
+        } catch (e) {
+            alert('复制失败，请手动复制');
+        }
+        document.body.removeChild(textarea);
+    });
 };
 
 // 获取歌手专辑
