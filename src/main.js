@@ -8,7 +8,7 @@ import ModalPlugin from './plugins/ModalPlugin';
 import MessagePlugin from './plugins/MessagePlugin';
 import i18n from './utils/i18n';
 import '@/assets/themes/dark.css';
-import { registerSW } from 'virtual:pwa-register'
+// import { registerSW } from 'virtual:pwa-register'
 
 // 初始化API服务器设置
 let settings = {};
@@ -45,14 +45,15 @@ window.addEventListener('unhandledrejection', event => {
   // window.$modal.alert('系统错误');
 });
 
-registerSW({
-  onNeedRefresh() {
-    console.log('有新内容可用，请刷新页面')
-  },
-  onOfflineReady() {
-    console.log('应用已准备好离线工作')
-  }
-})
+// 注释掉PWA注册，因为缺少相关插件
+// registerSW({
+//   onNeedRefresh() {
+//     console.log('有新内容可用，请刷新页面')
+//   },
+//   onOfflineReady() {
+//     console.log('应用已准备好离线工作')
+//   }
+// })
 
 app.use(pinia);
 app.use(router);
