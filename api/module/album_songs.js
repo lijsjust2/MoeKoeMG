@@ -1,7 +1,7 @@
 const { clientver, appid, cryptoMd5, signParamsKey } = require('../util');
 
 // 专辑音乐列表
-module.exports = async (params, useAxios) => {
+const albumSongsHandler = async (params, useAxios) => {
   const dfid = params?.cookie?.dfid || params?.dfid || '-';
   const userid = params?.cookie?.userid || params?.userid || 0;
   const token = params?.cookie?.token || params?.token || 0;
@@ -123,3 +123,13 @@ module.exports = async (params, useAxios) => {
   // 返回合并后的结果，兼容前端不同的响应结构期望
   return { headers: {}, status: 200, body: { status: 1, data: { songs: allSongs, audios: allSongs } } };
 };
+
+// 导出函数
+exports.getAlbumSongs = albumSongsHandler;
+
+// 默认导出
+module.exports = albumSongsHandler;
+
+// 为支持ES模块导入，添加__esModule标记和default导出
+Object.defineProperty(module.exports, '__esModule', { value: true });
+module.exports.default = albumSongsHandler;

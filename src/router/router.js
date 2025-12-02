@@ -14,6 +14,7 @@ import Ranking from '@/views/Ranking.vue';
 import CloudDrive from '@/views/CloudDrive.vue';
 import BatchDownload from '@/views/BatchDownload.vue';
 import BatchAlbumDownload from '@/views/BatchAlbumDownload.vue';
+import BatchArtistAlbumDownload from '@/views/BatchArtistAlbumDownload.vue';
 // FullScreenQueue已整合到主界面中
 import { MoeAuthStore } from '@/stores/store';
 
@@ -39,7 +40,8 @@ const routes = [
             { path: '/albumSongs', name: 'AlbumSongs', component: AlbumSongs },
             { path: '/album/:id/songs', name: 'AlbumSongsAlt', component: AlbumSongs },
             { path: '/batchDownload', name: 'BatchDownload', component: BatchDownload },
-            { path: '/batchAlbumDownload', name: 'BatchAlbumDownload', component: BatchAlbumDownload }
+            { path: '/batchAlbumDownload', name: 'BatchAlbumDownload', component: BatchAlbumDownload },
+            { path: '/batchArtistAlbumDownload', name: 'BatchArtistAlbumDownload', component: BatchArtistAlbumDownload }
         ],
     },
     { path: '/lyrics', name: 'Lyrics', component: Lyrics },

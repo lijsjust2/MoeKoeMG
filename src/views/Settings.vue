@@ -177,6 +177,12 @@ const settingSections = computed(() => [
                 label: '专辑批量下载',
                 icon: '📥 ',
                 action: () => router.push('/batchAlbumDownload')
+            },
+            {
+                key: 'batchArtistAlbumDownload',
+                label: '歌手专辑批量下载',
+                icon: '📥 ',
+                action: () => router.push('/batchArtistAlbumDownload')
             }
         ]
     }
@@ -228,7 +234,8 @@ const getItemIcon = (key) => {
         'touchBar': 'fas fa-tablet-alt',
         'shortcuts': 'fas fa-keyboard',
         'pwa': 'fas fa-mobile-alt',
-        'batchDownload': 'fas fa-download'
+        'batchDownload': 'fas fa-download',
+        'batchArtistAlbumDownload': 'fas fa-download'
     };
     return iconMap[key] || 'fas fa-sliders-h';
 };

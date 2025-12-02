@@ -58,6 +58,16 @@
                         type="text"
                     >
                 </div>
+                <div class="form-group">
+                    <label>
+                        <input 
+                            type="checkbox" 
+                            v-model="excludeConcertAlbums"
+                        >
+                        排除演唱会专辑
+                    </label>
+                    <small style="color: #999; display: block; margin-top: 5px;">勾选后将过滤掉专辑名称中包含演唱会相关关键词的专辑</small>
+                </div>
                 
                 <button 
                     class="download-btn" 
@@ -171,6 +181,7 @@ const quality = ref('flac');
 const pushplusToken = ref(localStorage.getItem('pushplusToken') || '');
 const delayMin = ref(10);
 const delayMax = ref(15);
+const excludeConcertAlbums = ref(false);
 
 // 监听pushplusToken变化并保存到localStorage
 watch(pushplusToken, (newValue) => {
@@ -549,11 +560,26 @@ const startDownload = async () => {
     
     try {
         // 获取专辑歌曲，明确传递当前专辑ID
-        const songs = await getAlbumSongs(currentAlbumId);
+        let songs = await getAlbumSongs(currentAlbumId);
         if (songs.length === 0) {
             alert('未找到该专辑的歌曲');
             isDownloading.value = false;
             return;
+        }
+        
+        // 排除演唱会专辑
+        if (excludeConcertAlbums.value) {
+            const concertKeywords = ['演唱会', '现场', 'Live现场', 'Live版'];
+            songs = songs.filter(song => {
+                const albumName = song.album || '';
+                return !concertKeywords.some(keyword => albumName.includes(keyword));
+            });
+            
+            if (songs.length === 0) {
+                alert('过滤演唱会专辑后，没有可下载的歌曲');
+                isDownloading.value = false;
+                return;
+            }
         }
         
         totalSongs.value = songs.length;
