@@ -83,12 +83,21 @@
             
             <div class="download-options">
               <div class="form-group">
-                <label for="quality">下载音质</label>
-                <select id="quality" v-model="downloadQuality" class="form-control">
-                  <option value="flac">无损音质(FLAC)</option>
-                  <option value="mp3_320">高品质(MP3 320kbps)</option>
-                  <option value="mp3_192">标准品质(MP3 128kbps)</option>
-                </select>
+                <label>下载音质</label>
+                <div class="checkbox-group quality-checkboxes">
+                  <label class="checkbox-label">
+                    <input type="checkbox" value="flac" v-model="downloadQuality">
+                    <span>无损音质(FLAC)</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" value="mp3_320" v-model="downloadQuality">
+                    <span>高品质(MP3 320kbps)</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="checkbox" value="mp3_192" v-model="downloadQuality">
+                    <span>标准品质(MP3 128kbps)</span>
+                  </label>
+                </div>
               </div>
               
               <div class="form-group">
@@ -130,6 +139,21 @@
                   <span>排除演唱会专辑</span>
                 </label>
                 <small>勾选后将过滤掉专辑名称中包含演唱会相关关键词的专辑</small>
+              </div>
+              
+              <!-- 歌曲命名格式选项 -->
+              <div class="form-group">
+                <label>歌曲命名格式：</label>
+                <div class="radio-group">
+                  <label class="checkbox-label">
+                    <input type="radio" value="song-artist" v-model="songNameFormat">
+                    <span>歌曲名-歌手名</span>
+                  </label>
+                  <label class="checkbox-label">
+                    <input type="radio" value="artist-song" v-model="songNameFormat">
+                    <span>歌手名-歌曲名</span>
+                  </label>
+                </div>
               </div>
               
               <button 
@@ -196,8 +220,8 @@
                     :class="item.status"
                   >
                     <div class="song-info">
-                      <div class="song-name">{{ item.song.name }}</div>
-                      <div class="song-author">{{ item.song.author }}</div>
+                      <div class="song-name">{{ item.song.song?.name || item.song.name }}</div>
+                      <div class="song-author">{{ item.song.song?.author || item.song.author }}</div>
                     </div>
                     <div class="download-status">
                       <span v-if="item.status === 'pending'">等待下载</span>
@@ -243,11 +267,12 @@ export default {
     const selectAll = ref(false) // 全选状态
     
     // 下载参数
-    const downloadQuality = ref('flac')
+    const downloadQuality = ref(['mp3_320']) // 默认选择320K高品质
     const minInterval = ref(10)
     const maxInterval = ref(15)
     const pushToken = ref(localStorage.getItem('pushplusToken') || '')
     const excludeLiveAlbums = ref(false)
+    const songNameFormat = ref('song-artist') // 歌曲命名格式，'song-artist'为歌曲名-歌手名，'artist-song'为歌手名-歌曲名
     const isDownloading = ref(false)
     const downloadHistory = ref([])
     const currentDownloadIndex = ref(-1)
@@ -534,12 +559,12 @@ export default {
       }
     }
     
-    // 下载单个歌曲
-    const downloadSingleSong = async (song, index) => {
+    // 下载单个歌曲的特定音质版本
+    const downloadSingleSongQuality = async (song, quality, index) => {
       try {
         // 根据选择的音质获取对应的歌曲hash
         let hash;
-        switch (downloadQuality.value) {
+        switch (quality) {
           case 'flac':
             hash = song.originalData?.hash_flac || song.originalData?.audio_info?.hash_flac || song.hash || song.id;
             break;
@@ -554,7 +579,7 @@ export default {
         // 获取下载链接
         const downloadParams = {
           hash: hash,
-          quality: downloadQuality.value === 'flac' ? 'flac' : downloadQuality.value === 'mp3_320' ? '320' : '128'
+          quality: quality === 'flac' ? 'flac' : quality === 'mp3_320' ? '320' : '128'
         };
 
         // 未登录用户添加free_part参数
@@ -609,7 +634,15 @@ export default {
               const blobUrl = URL.createObjectURL(blob);
               
               // 创建安全的文件名
-              const safeFileName = `${song.name || '未知歌曲'} - ${song.author || '未知歌手'}.${downloadQuality.value === 'flac' ? 'flac' : 'mp3'}`;
+              let safeFileName;
+              const extension = quality === 'flac' ? 'flac' : 'mp3';
+              const qualityLabel = quality === 'flac' ? '无损' : quality === 'mp3_320' ? '320K' : '128K';
+              
+              if (songNameFormat.value === 'artist-song') {
+                safeFileName = `${song.author || '未知歌手'} - ${song.name || '未知歌曲'} [${qualityLabel}].${extension}`;
+              } else {
+                safeFileName = `${song.name || '未知歌曲'} - ${song.author || '未知歌手'} [${qualityLabel}].${extension}`;
+              }
               
               downloadLink.href = blobUrl;
               downloadLink.download = safeFileName;
@@ -650,9 +683,17 @@ export default {
         let content = `批量下载已完成：\n- 总下载数：${totalCount}\n- 成功数：${successCount}\n- 失败数：${failedCount}\n\n下载明细：\n`;
         
         downloadHistory.value.forEach(item => {
-          const song = item.song;
+          // 获取正确的歌曲对象路径
+          const actualSong = item.song.song || item.song;
+          const qualityLabel = item.song.quality === 'flac' ? ' [无损]' : item.song.quality === 'mp3_320' ? ' [320K]' : ' [128K]';
           const statusText = item.status === 'success' ? '下载成功' : '下载失败';
-          content += `${song.album || '未知专辑'}-${song.name || '未知歌曲'}  ${statusText}\n`;
+          
+          // 按照用户选择的歌曲命名格式生成推送内容
+          if (songNameFormat.value === 'artist-song') {
+            content += `${actualSong.album || '未知专辑'}-${actualSong.author || '未知歌手'} - ${actualSong.name || '未知歌曲'}${qualityLabel}  ${statusText}\n`;
+          } else {
+            content += `${actualSong.album || '未知专辑'}-${actualSong.name || '未知歌曲'} - ${actualSong.author || '未知歌手'}${qualityLabel}  ${statusText}\n`;
+          }
         });
         
         const response = await fetch('http://www.pushplus.plus/send', {
@@ -677,6 +718,11 @@ export default {
       }
     }
     
+    // 下载单个歌曲（适配多音质下载）
+    const downloadSingleSong = async (songWithQuality, index) => {
+      return downloadSingleSongQuality(songWithQuality.song, songWithQuality.quality, index);
+    }
+    
     // 开始批量下载
     const startBatchDownload = async () => {
       if (albumIds.value.length === 0) {
@@ -687,6 +733,12 @@ export default {
       // 检查是否选择了专辑
       if (selectedAlbums.value.length === 0) {
         errorMessage.value = '请至少选择一个专辑进行下载';
+        return;
+      }
+      
+      // 检查是否选择了音质
+      if (downloadQuality.value.length === 0) {
+        errorMessage.value = '请至少选择一个音质进行下载';
         return;
       }
       
@@ -723,17 +775,30 @@ export default {
           }
         }
         
-        totalSongs.value = songs.length;
+        // 为每个歌曲创建对应音质的下载任务
+        const downloadTasks = [];
+        songs.forEach(song => {
+          downloadQuality.value.forEach(quality => {
+            downloadTasks.push({
+              song: { ...song }, // 深拷贝歌曲对象
+              quality,
+              // 添加音质标签到歌曲信息中，便于显示
+              album: song.album + (quality === 'flac' ? ' [无损]' : quality === 'mp3_320' ? ' [320K]' : ' [128K]')
+            });
+          });
+        });
+        
+        totalSongs.value = downloadTasks.length;
         
         // 初始化下载历史
-        downloadHistory.value = songs.map(song => ({
-          song,
+        downloadHistory.value = downloadTasks.map(task => ({
+          song: task,
           status: 'pending',
           progress: 0
         }));
         
         // 批量下载歌曲
-        for (let i = 0; i < songs.length; i++) {
+        for (let i = 0; i < downloadTasks.length; i++) {
           if (isStopRequested.value) {
             break;
           }
@@ -745,13 +810,13 @@ export default {
           downloadHistory.value[i].progress = 0;
           
           // 下载歌曲
-          const success = await downloadSingleSong(songs[i], i);
+          const success = await downloadSingleSong(downloadTasks[i], i);
           
           // 更新下载结果
           downloadHistory.value[i].status = success ? 'success' : 'error';
           
           // 下载间等待
-          if (i < songs.length - 1 && !isStopRequested.value) {
+          if (i < downloadTasks.length - 1 && !isStopRequested.value) {
             const actualMin = Math.min(minInterval.value, maxInterval.value) * 1000;
             const actualMax = Math.max(minInterval.value, maxInterval.value) * 1000;
             const delay = Math.floor(Math.random() * (actualMax - actualMin + 1)) + actualMin;
@@ -767,19 +832,15 @@ export default {
           }
         }
         
-        // 检查是否被停止
-        if (isStopRequested.value) {
-          alert('批量下载已停止');
-        } else {
-          alert('批量下载完成');
-        }
-        
         // 下载完成后发送PushPlus通知
         if (pushToken.value.trim()) {
           const successCount = downloadHistory.value.filter(item => item.status === 'success').length;
           const failedCount = downloadHistory.value.filter(item => item.status === 'error').length;
           sendPushPlusNotification(successCount, failedCount);
         }
+        
+        // 简单的日志提示，不阻断流程
+        console.log(isStopRequested.value ? '批量下载已停止' : '批量下载完成');
         
       } catch (error) {
         console.error('批量下载失败:', error);
@@ -798,6 +859,7 @@ export default {
       errorMessage,
       artistInfoMap,
       queryArtistAlbums,
+      songNameFormat,
       // 多选相关
       selectedAlbums,
       selectAll,
