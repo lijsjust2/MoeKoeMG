@@ -720,7 +720,12 @@ export default {
     
     // 下载单个歌曲（适配多音质下载）
     const downloadSingleSong = async (songWithQuality, index) => {
-      return downloadSingleSongQuality(songWithQuality.song, songWithQuality.quality, index);
+      try {
+        return await downloadSingleSongQuality(songWithQuality.song, songWithQuality.quality, index);
+      } catch (error) {
+        console.error('下载歌曲失败:', error);
+        return false;
+      }
     }
     
     // 开始批量下载
@@ -809,11 +814,16 @@ export default {
           downloadHistory.value[i].status = 'downloading';
           downloadHistory.value[i].progress = 0;
           
-          // 下载歌曲
-          const success = await downloadSingleSong(downloadTasks[i], i);
-          
-          // 更新下载结果
-          downloadHistory.value[i].status = success ? 'success' : 'error';
+          try {
+            // 下载歌曲
+            const success = await downloadSingleSong(downloadTasks[i], i);
+            
+            // 更新下载结果
+            downloadHistory.value[i].status = success ? 'success' : 'error';
+          } catch (error) {
+            console.error(`下载第 ${i + 1} 首歌曲失败:`, error);
+            downloadHistory.value[i].status = 'error';
+          }
           
           // 下载间等待
           if (i < downloadTasks.length - 1 && !isStopRequested.value) {
@@ -843,8 +853,8 @@ export default {
         console.log(isStopRequested.value ? '批量下载已停止' : '批量下载完成');
         
       } catch (error) {
-        console.error('批量下载失败:', error);
-        alert('批量下载失败');
+        console.error('批量下载准备阶段失败:', error);
+        alert('批量下载准备阶段失败');
       } finally {
         isDownloading.value = false;
       }
